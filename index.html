@@ -179,12 +179,12 @@ const ctx = canvas.getContext('2d');
 
 /* ===== Game ===== */
 const COLORS = [
-  {fill:'#f43f5e', glow:'#ff8aa2'},
-  {fill:'#22c55e', glow:'#7dffb2'},
-  {fill:'#38bdf8', glow:'#8be7ff'},
-  {fill:'#facc15', glow:'#ffe88a'},
-  {fill:'#a78bfa', glow:'#d5c6ff'},
-  {fill:'#fb923c', glow:'#ffd0a8'},
+  {fill:'#fda4af', glow:'#fecdd3'}, // 柔粉
+  {fill:'#86efac', glow:'#bbf7d0'}, // 柔绿
+  {fill:'#7dd3fc', glow:'#bae6fd'}, // 柔蓝
+  {fill:'#fde68a', glow:'#fef3c7'}, // 柔黄
+  {fill:'#c4b5fd', glow:'#ddd6fe'}, // 柔紫
+  {fill:'#fdba74', glow:'#fed7aa'}, // 柔橙
 ];
 
 const MODE = { MOVES:'moves', TIME:'time' };
@@ -793,7 +793,7 @@ class Game{
     // glow
     ctx.save();
     ctx.shadowColor = c.glow;
-    ctx.shadowBlur = 18 * t.scale;
+    ctx.shadowBlur = 8 * t.scale;
     ctx.fillStyle = c.fill;
     roundRect(ctx, ox,oy,s,s,r);
     ctx.fill();
