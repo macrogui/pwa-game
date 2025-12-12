@@ -179,12 +179,12 @@ const ctx = canvas.getContext('2d');
 
 /* ===== Game ===== */
 const COLORS = [
-  {fill:'#fda4af', glow:'#fecdd3'}, // 柔粉
-  {fill:'#86efac', glow:'#bbf7d0'}, // 柔绿
-  {fill:'#7dd3fc', glow:'#bae6fd'}, // 柔蓝
-  {fill:'#fde68a', glow:'#fef3c7'}, // 柔黄
-  {fill:'#c4b5fd', glow:'#ddd6fe'}, // 柔紫
-  {fill:'#fdba74', glow:'#fed7aa'}, // 柔橙
+  {fill:'#d6a0ab', glow:'#e8c6ce'}, // 柔粉（柔和）
+  {fill:'#74b58a', glow:'#a8d0b6'}, // 柔绿（柔和）
+  {fill:'#6ca8c9', glow:'#a9cde2'}, // 柔蓝（柔和）
+  {fill:'#d7c27b', glow:'#e6d7a7'}, // 柔黄（柔和）
+  {fill:'#a89ccf', glow:'#c7c1e3'}, // 柔紫（柔和）
+  {fill:'#d6a670', glow:'#e6c69c'}, // 柔橙（柔和）
 ];
 
 const MODE = { MOVES:'moves', TIME:'time' };
@@ -793,16 +793,9 @@ class Game{
     // glow
     ctx.save();
     ctx.shadowColor = c.glow;
-    ctx.shadowBlur = 8 * t.scale;
+    ctx.shadowBlur = 5 * t.scale;
     ctx.fillStyle = c.fill;
     roundRect(ctx, ox,oy,s,s,r);
-    ctx.fill();
-
-    // highlight
-    ctx.shadowBlur = 0;
-    ctx.globalAlpha=0.25;
-    ctx.fillStyle='#ffffff';
-    roundRect(ctx, ox+4, oy+3, s-8, s*0.42, r-4);
     ctx.fill();
     ctx.restore();
 
