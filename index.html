@@ -1,87 +1,183 @@
 <!doctype html>
 <html lang="zh">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
-  <title>躲避方块</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#111111">
-  <style>
-    html,body{margin:0;height:100%;background:#111;color:#fff;font-family:system-ui,-apple-system}
-    #c{display:block;width:100vw;height:100vh;touch-action:none}
-    .hud{position:fixed;left:12px;top:10px;font-size:14px}
-    .btn{position:fixed;right:12px;top:10px;padding:8px 10px;border:1px solid #555;border-radius:10px}
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
+<title>消消乐</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f172a">
+<style>
+html,body{margin:0;height:100%;background:#0f172a;color:#fff;font-family:system-ui}
+#game{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%}
+canvas{touch-action:none}
+#top{margin-bottom:10px}
+</style>
 </head>
 <body>
-<canvas id="c"></canvas>
-<div class="hud" id="hud">分数：0</div>
-<div class="btn" id="btn">重开</div>
+<div id="game">
+  <div id="top">分数：<span id="score">0</span></div>
+  <canvas id="c"></canvas>
+</div>
 
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+  navigator.serviceWorker.register('./sw.js');
 }
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-const hud = document.getElementById('hud');
-const btn = document.getElementById('btn');
+const scoreEl = document.getElementById('score');
+
+const COLS=8, ROWS=8;
+const SIZE=48;
+const TYPES=6;
+let board=[];
+let score=0;
+let animating=false;
 
 function resize(){
-  const dpr = Math.min(2, devicePixelRatio || 1);
-  canvas.width = innerWidth * dpr;
-  canvas.height = innerHeight * dpr;
-  canvas.style.width = innerWidth+'px';
-  canvas.style.height = innerHeight+'px';
-  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const scale=Math.min(innerWidth/(COLS*SIZE), (innerHeight-80)/(ROWS*SIZE));
+  canvas.width=COLS*SIZE*scale;
+  canvas.height=ROWS*SIZE*scale;
+  ctx.setTransform(scale,0,0,scale,0,0);
 }
-addEventListener('resize', resize); resize();
+resize(); addEventListener('resize',resize);
 
-let score=0, over=false;
-const player={x:innerWidth/2,y:innerHeight-80,r:18};
-const blocks=[];
-let spawn=0, last=performance.now();
+function randType(){ return Math.floor(Math.random()*TYPES); }
 
-btn.onclick=()=>{score=0;over=false;blocks.length=0;};
-
-canvas.onpointerdown=e=>player.x=e.clientX;
-canvas.onpointermove=e=>player.x=e.clientX;
-
-function loop(now){
-  const dt=Math.min(0.033,(now-last)/1000); last=now;
-  ctx.clearRect(0,0,innerWidth,innerHeight);
-
-  if(!over){
-    spawn-=dt;
-    if(spawn<=0){
-      spawn=0.6;
-      blocks.push({x:Math.random()*(innerWidth-60),y:-30,w:60,h:20,vy:260});
+function init(){
+  board=[];
+  for(let y=0;y<ROWS;y++){
+    const row=[];
+    for(let x=0;x<COLS;x++){
+      let t;
+      do{
+        t=randType();
+      }while(
+        (x>=2 && row[x-1]===t && row[x-2]===t) ||
+        (y>=2 && board[y-1][x]===t && board[y-2][x]===t)
+      );
+      row.push(t);
     }
-    blocks.forEach(b=>b.y+=b.vy*dt);
-    score+=Math.floor(dt*100);
-    hud.textContent=`分数：${score}`;
+    board.push(row);
+  }
+}
+init();
 
-    for(const b of blocks){
-      const cx=Math.max(b.x,Math.min(player.x,b.x+b.w));
-      const cy=Math.max(b.y,Math.min(player.y,b.y+b.h));
-      if((player.x-cx)**2+(player.y-cy)**2<player.r**2) over=true;
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let y=0;y<ROWS;y++){
+    for(let x=0;x<COLS;x++){
+      const t=board[y][x];
+      if(t==null) continue;
+      ctx.fillStyle=[
+        "#f43f5e","#22c55e","#38bdf8",
+        "#facc15","#a78bfa","#fb923c"
+      ][t];
+      ctx.fillRect(x*SIZE,y*SIZE,SIZE-4,SIZE-4);
     }
   }
+}
 
-  ctx.fillStyle=over?'#f43f5e':'#22c55e';
-  ctx.beginPath();ctx.arc(player.x,player.y,player.r,0,Math.PI*2);ctx.fill();
-
-  ctx.fillStyle='#eab308';
-  blocks.forEach(b=>ctx.fillRect(b.x,b.y,b.w,b.h));
-
-  if(over){
-    ctx.fillStyle='#fff';
-    ctx.fillText('撞到了！点右上角重开',20,40);
+function findMatches(){
+  const marks=new Set();
+  // 横
+  for(let y=0;y<ROWS;y++){
+    let cnt=1;
+    for(let x=1;x<=COLS;x++){
+      if(x<COLS && board[y][x]===board[y][x-1] && board[y][x]!=null){
+        cnt++;
+      }else{
+        if(cnt>=3){
+          for(let k=0;k<cnt;k++) marks.add(`${y},${x-1-k}`);
+        }
+        cnt=1;
+      }
+    }
   }
+  // 竖
+  for(let x=0;x<COLS;x++){
+    let cnt=1;
+    for(let y=1;y<=ROWS;y++){
+      if(y<ROWS && board[y][x]===board[y-1][x] && board[y][x]!=null){
+        cnt++;
+      }else{
+        if(cnt>=3){
+          for(let k=0;k<cnt;k++) marks.add(`${y-1-k},${x}`);
+        }
+        cnt=1;
+      }
+    }
+  }
+  return [...marks].map(s=>s.split(',').map(Number));
+}
+
+async function clearMatches(){
+  let combo=0;
+  while(true){
+    const matches=findMatches();
+    if(!matches.length) break;
+    combo++;
+    matches.forEach(([y,x])=>board[y][x]=null);
+    score+=matches.length*10*combo;
+    scoreEl.textContent=score;
+    await drop();
+  }
+}
+
+async function drop(){
+  for(let x=0;x<COLS;x++){
+    let stack=[];
+    for(let y=ROWS-1;y>=0;y--){
+      if(board[y][x]!=null) stack.push(board[y][x]);
+    }
+    for(let y=ROWS-1;y>=0;y--){
+      board[y][x]=stack.shift() ?? randType();
+    }
+  }
+  await sleep(150);
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+let sx,sy,sel=null;
+
+canvas.onpointerdown=e=>{
+  if(animating) return;
+  const rect=canvas.getBoundingClientRect();
+  sx=Math.floor((e.clientX-rect.left)/(rect.width/COLS));
+  sy=Math.floor((e.clientY-rect.top)/(rect.height/ROWS));
+  sel={x:sx,y:sy};
+};
+
+canvas.onpointerup=e=>{
+  if(!sel || animating) return;
+  const rect=canvas.getBoundingClientRect();
+  const ex=Math.floor((e.clientX-rect.left)/(rect.width/COLS));
+  const ey=Math.floor((e.clientY-rect.top)/(rect.height/ROWS));
+  const dx=Math.abs(ex-sel.x), dy=Math.abs(ey-sel.y);
+  if(dx+dy===1){
+    swap(sel.x,sel.y,ex,ey);
+  }
+  sel=null;
+};
+
+async function swap(x1,y1,x2,y2){
+  [board[y1][x1],board[y2][x2]]=[board[y2][x2],board[y1][x1]];
+  if(!findMatches().length){
+    [board[y1][x1],board[y2][x2]]=[board[y2][x2],board[y1][x1]];
+    return;
+  }
+  animating=true;
+  await clearMatches();
+  animating=false;
+}
+
+function loop(){
+  draw();
   requestAnimationFrame(loop);
 }
-requestAnimationFrame(loop);
+loop();
 </script>
 </body>
 </html>
