@@ -5,40 +5,40 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
   <title>消消乐 · 精致版</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#0b1220">
+  <meta name="theme-color" content="#0c141c">
   <style>
-    :root{ --bg:#0b1220; --panel:#0f1a33cc; --panel2:#0f1a33; --stroke:#2a3a66; --text:#e8f0ff; --muted:#9bb0d6;}
-    html,body{margin:0;height:100%;background:radial-gradient(1200px 600px at 30% 10%,#1b2b55 0%,#0b1220 55%,#070b14 100%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto}
+    :root{ --bg:#0c141c; --panel:#10202fcc; --panel2:#111c2a; --stroke:#1f3044; --text:#e7f1fb; --muted:#9fb5c8;}
+    html,body{margin:0;height:100%;background:radial-gradient(1200px 600px at 30% 10%,#1a2c3f 0%,#0c141c 55%,#091019 100%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto}
     #wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px;box-sizing:border-box}
     #topbar{
       width:min(520px,96vw);
       display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;
-      background:var(--panel);backdrop-filter: blur(8px);
+      background:var(--panel);backdrop-filter: blur(10px);
       border:1px solid var(--stroke); border-radius:14px; padding:10px 10px;
-      box-shadow: 0 10px 30px #0006;
+      box-shadow: 0 10px 30px #0005;
     }
     .group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .pill{
       display:flex;gap:6px;align-items:baseline;
-      padding:8px 10px;border-radius:12px;background:#0b1430;
-      border:1px solid #20325c;
+      padding:8px 10px;border-radius:12px;background:#0f1b2a;
+      border:1px solid #203144;
     }
     .k{font-size:12px;color:var(--muted)}
     .v{font-size:16px;font-weight:700;letter-spacing:.2px}
     .btn{
-      padding:10px 12px;border-radius:12px;border:1px solid #2a3a66;
-      background:linear-gradient(180deg,#162a55,#0d1b3b);
+      padding:10px 12px;border-radius:12px;border:1px solid #24364a;
+      background:linear-gradient(180deg,#1a2f45,#0f2235);
       color:var(--text); font-weight:700;
-      box-shadow: 0 8px 20px #0005;
+      box-shadow: 0 8px 20px #0004;
       user-select:none; -webkit-user-select:none;
     }
     .btn:active{transform:translateY(1px)}
     .btn.secondary{background:#0b1430}
     .btn.small{padding:8px 10px;font-weight:700}
-    .seg{display:flex;border:1px solid #2a3a66;border-radius:12px;overflow:hidden}
-    .seg button{border:0;background:#0b1430;color:var(--muted);padding:10px 12px;font-weight:800}
-    .seg button.active{background:linear-gradient(180deg,#203b7a,#132a55);color:var(--text)}
-    canvas{touch-action:none;border-radius:18px;border:1px solid #2a3a66;box-shadow: 0 18px 40px #0007}
+    .seg{display:flex;border:1px solid #24364a;border-radius:12px;overflow:hidden}
+    .seg button{border:0;background:#0f1b2a;color:var(--muted);padding:10px 12px;font-weight:800}
+    .seg button.active{background:linear-gradient(180deg,#29445f,#19334a);color:var(--text)}
+    canvas{touch-action:none;border-radius:18px;border:1px solid #24364a;box-shadow: 0 18px 36px #0006}
     #hint{width:min(520px,96vw);color:var(--muted);font-size:12px;line-height:1.4;text-align:center;opacity:.95}
     #overlay{
       position:fixed;inset:0;display:none;align-items:center;justify-content:center;
@@ -53,7 +53,7 @@
     #modal h2{margin:6px 4px 10px;font-size:18px}
     #modal p{margin:6px 4px;color:var(--muted);font-size:13px;line-height:1.6}
     #modal .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .tag{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid #2a3a66;border-radius:12px;background:#0b1430}
+    .tag{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid #24364a;border-radius:12px;background:#0f1b2a}
   </style>
 </head>
 <body>
@@ -142,24 +142,28 @@ class SFX{
   constructor(){
     this.enabled = true;
     this.ctx = null;
+    this.readyPromise = null;
   }
-  ensure(){
+  async ensureReady(){
     if (!this.enabled) return null;
     if (!this.ctx){
       const AC = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AC();
     }
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.ctx.state === 'suspended'){
+      this.readyPromise = this.readyPromise || this.ctx.resume().catch(()=>null);
+      await this.readyPromise;
+    }
     return this.ctx;
   }
-  tone(freq, dur=0.06, type='sine', gain=0.04){
-    const ctx = this.ensure(); if(!ctx) return;
+  async tone(freq, dur=0.06, type='sine', gain=0.04){
+    const ctx = await this.ensureReady(); if(!ctx || ctx.state!=='running') return;
     const o = ctx.createOscillator();
     const g = ctx.createGain();
     o.type = type; o.frequency.value = freq;
     g.gain.value = gain;
     o.connect(g); g.connect(ctx.destination);
-    const t = ctx.currentTime;
+    const t = ctx.currentTime + 0.01;
     g.gain.setValueAtTime(gain, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
     o.start(t); o.stop(t+dur);
@@ -179,12 +183,12 @@ const ctx = canvas.getContext('2d');
 
 /* ===== Game ===== */
 const COLORS = [
-  {fill:'#d6a0ab', glow:'#e8c6ce'}, // 柔粉（柔和）
-  {fill:'#74b58a', glow:'#a8d0b6'}, // 柔绿（柔和）
-  {fill:'#6ca8c9', glow:'#a9cde2'}, // 柔蓝（柔和）
-  {fill:'#d7c27b', glow:'#e6d7a7'}, // 柔黄（柔和）
-  {fill:'#a89ccf', glow:'#c7c1e3'}, // 柔紫（柔和）
-  {fill:'#d6a670', glow:'#e6c69c'}, // 柔橙（柔和）
+  {fill:'#b7cdd3', glow:'#d5e6ea'}, // 雾蓝
+  {fill:'#a8c9b2', glow:'#cfe2d5'}, // 淡竹绿
+  {fill:'#c7c1d8', glow:'#e3deed'}, // 淡紫灰
+  {fill:'#d5c9aa', glow:'#ebe2c9'}, // 软米杏
+  {fill:'#b8d2c5', glow:'#d9e7de'}, // 海盐绿
+  {fill:'#c9d3b8', glow:'#e3ead0'}, // 轻豆沙
 ];
 
 const MODE = { MOVES:'moves', TIME:'time' };
@@ -731,15 +735,15 @@ class Game{
 
     // board panel
     ctx.save();
-    ctx.fillStyle = '#091028';
+    ctx.fillStyle = '#0b1320';
     roundRect(ctx, 0,0,w,h,18);
     ctx.fill();
     ctx.restore();
 
     // grid subtle
     ctx.save();
-    ctx.globalAlpha=0.22;
-    ctx.strokeStyle = '#1b2a52';
+    ctx.globalAlpha=0.18;
+    ctx.strokeStyle = '#1c2a40';
     for(let x=0;x<=this.cols;x++){
       const gx=this.pad + x*this.size;
       ctx.beginPath(); ctx.moveTo(gx,this.pad); ctx.lineTo(gx,this.pad+this.rows*this.size); ctx.stroke();
@@ -844,7 +848,7 @@ class Game{
     if(!a || !b) return;
 
     // start audio on gesture
-    sfx.ensure();
+    sfx.ensureReady();
 
     // swap + animate
     this.swapTiles(a,b);
