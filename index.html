@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <title>躲避方块</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#111111">
+  <style>
+    html,body{margin:0;height:100%;background:#111;color:#fff;font-family:system-ui,-apple-system}
+    #c{display:block;width:100vw;height:100vh;touch-action:none}
+    .hud{position:fixed;left:12px;top:10px;font-size:14px}
+    .btn{position:fixed;right:12px;top:10px;padding:8px 10px;border:1px solid #555;border-radius:10px}
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud" id="hud">分数：0</div>
+<div class="btn" id="btn">重开</div>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+}
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const hud = document.getElementById('hud');
+const btn = document.getElementById('btn');
+
+function resize(){
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  canvas.width = innerWidth * dpr;
+  canvas.height = innerHeight * dpr;
+  canvas.style.width = innerWidth+'px';
+  canvas.style.height = innerHeight+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener('resize', resize); resize();
+
+let score=0, over=false;
+const player={x:innerWidth/2,y:innerHeight-80,r:18};
+const blocks=[];
+let spawn=0, last=performance.now();
+
+btn.onclick=()=>{score=0;over=false;blocks.length=0;};
+
+canvas.onpointerdown=e=>player.x=e.clientX;
+canvas.onpointermove=e=>player.x=e.clientX;
+
+function loop(now){
+  const dt=Math.min(0.033,(now-last)/1000); last=now;
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+
+  if(!over){
+    spawn-=dt;
+    if(spawn<=0){
+      spawn=0.6;
+      blocks.push({x:Math.random()*(innerWidth-60),y:-30,w:60,h:20,vy:260});
+    }
+    blocks.forEach(b=>b.y+=b.vy*dt);
+    score+=Math.floor(dt*100);
+    hud.textContent=`分数：${score}`;
+
+    for(const b of blocks){
+      const cx=Math.max(b.x,Math.min(player.x,b.x+b.w));
+      const cy=Math.max(b.y,Math.min(player.y,b.y+b.h));
+      if((player.x-cx)**2+(player.y-cy)**2<player.r**2) over=true;
+    }
+  }
+
+  ctx.fillStyle=over?'#f43f5e':'#22c55e';
+  ctx.beginPath();ctx.arc(player.x,player.y,player.r,0,Math.PI*2);ctx.fill();
+
+  ctx.fillStyle='#eab308';
+  blocks.forEach(b=>ctx.fillRect(b.x,b.y,b.w,b.h));
+
+  if(over){
+    ctx.fillStyle='#fff';
+    ctx.fillText('撞到了！点右上角重开',20,40);
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
